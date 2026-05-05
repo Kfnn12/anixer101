@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getAnimeEpisodes, getEpisodeServers, getEpisodeSources, Episode, ServersData, SourcesData, getAnimeDetails, AnimeDetails } from '../lib/api';
 import VideoPlayer from '../components/VideoPlayer';
 import { ArrowLeft } from 'lucide-react';
@@ -7,6 +7,7 @@ import { cn } from '../lib/utils';
 
 export default function WatchEpisode() {
   const { episodeId } = useParams<{ episodeId: string }>();
+  const navigate = useNavigate();
   
   const [animeId, setAnimeId] = useState<string>('');
   const [details, setDetails] = useState<AnimeDetails | null>(null);
@@ -20,6 +21,48 @@ export default function WatchEpisode() {
   
   const [loading, setLoading] = useState(true);
   const [sourcesLoading, setSourcesLoading] = useState(false);
+
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('autoPlayEnabled') !== 'false';
+  });
+  
+  const [autoPlayCountdown, setAutoPlayCountdown] = useState<number | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('autoPlayEnabled', String(autoPlayEnabled));
+  }, [autoPlayEnabled]);
+
+  useEffect(() => {
+    // Stop countdown when episode changes
+    setAutoPlayCountdown(null);
+  }, [episodeId]);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (autoPlayCountdown !== null && autoPlayCountdown > 0) {
+      timer = setTimeout(() => {
+        setAutoPlayCountdown(c => (c !== null ? c - 1 : null));
+      }, 1000);
+    } else if (autoPlayCountdown === 0) {
+      // Find next episode and navigate
+      const currentIndex = episodes.findIndex(e => e.episodeId === episodeId);
+      if (currentIndex !== -1 && currentIndex < episodes.length - 1) {
+        const nextEp = episodes[currentIndex + 1];
+        navigate(`/watch/${encodeURIComponent(nextEp.episodeId)}`);
+      }
+      setAutoPlayCountdown(null);
+    }
+    return () => clearTimeout(timer);
+  }, [autoPlayCountdown, episodes, episodeId, navigate]);
+
+  const handleVideoEnded = () => {
+    if (autoPlayEnabled) {
+      const currentIndex = episodes.findIndex(e => e.episodeId === episodeId);
+      if (currentIndex !== -1 && currentIndex < episodes.length - 1) {
+        setAutoPlayCountdown(5); // 5 seconds countdown
+      }
+    }
+  };
 
   useEffect(() => {
     if (!episodeId) return;
@@ -115,14 +158,58 @@ export default function WatchEpisode() {
                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
             </div>
           ) : sources && sources.sources.length > 0 ? (
-            <VideoPlayer sourcesData={sources} />
+            <VideoPlayer sourcesData={sources} onEnded={handleVideoEnded} />
           ) : (
             <div className="w-full aspect-video bg-black/50 relative rounded-xl overflow-hidden glass-panel flex items-center justify-center text-white/50">
                Failed to load video source for the selected server.
             </div>
           )}
+          
+          {/* Autoplay Countdown Overlay */}
+          {autoPlayCountdown !== null && (
+            <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-20 rounded-xl backdrop-blur-sm">
+              <h3 className="text-2xl font-bold text-white mb-4">Next episode starting in</h3>
+              <div className="text-6xl font-black text-accent mb-8">{autoPlayCountdown}</div>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setAutoPlayCountdown(0)}
+                  className="px-6 py-2.5 rounded-full bg-accent text-white font-bold hover:bg-accent/80 transition-colors"
+                >
+                  Play Now
+                </button>
+                <button
+                  onClick={() => setAutoPlayCountdown(null)}
+                  className="px-6 py-2.5 rounded-full bg-white/10 text-white font-bold hover:bg-white/20 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         
+        {/* Controls Area */}
+        <div className="flex items-center justify-end gap-3 px-1 text-sm text-white/70">
+          <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
+            <span className="font-medium">Autoplay Next</span>
+            <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                <input 
+                  type="checkbox" 
+                  name="toggle" 
+                  id="toggle" 
+                  checked={autoPlayEnabled}
+                  onChange={(e) => setAutoPlayEnabled(e.target.checked)}
+                  className="absolute block w-5 h-5 rounded-full bg-white appearance-none cursor-pointer transition-transform duration-200 ease-in-out"
+                  style={{ top: 0, left: 0, transform: autoPlayEnabled ? 'translateX(100%)' : 'translateX(0)', border: 'none' }}
+                />
+                <label 
+                  htmlFor="toggle" 
+                  className={`toggle-label display-block overflow-hidden h-5 rounded-full cursor-pointer transition-colors duration-200 ease-in-out ${autoPlayEnabled ? 'bg-accent' : 'bg-white/20'}`}
+                ></label>
+            </div>
+          </label>
+        </div>
+
         {/* Server Selection */}
         {servers && (
           <div className="glass-panel p-6 rounded-xl space-y-6">

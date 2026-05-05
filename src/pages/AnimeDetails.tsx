@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { getAnimeDetails, AnimeDetails as AnimeDetailsType } from '../lib/api';
 import { Play } from 'lucide-react';
 import AnimeCard from '../components/AnimeCard';
+import AnimeTrailer from '../components/AnimeTrailer';
 
 export default function AnimeDetails() {
   const { id } = useParams<{ id: string }>();
@@ -79,6 +80,20 @@ export default function AnimeDetails() {
                  )}
               </div>
 
+              {moreInfo.genres && moreInfo.genres.length > 0 && (
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-6">
+                  {moreInfo.genres.map(g => (
+                    <Link
+                      key={g}
+                      to={`/genre/${g.toLowerCase().replace(/ /g, '-')}`}
+                      className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white/90 text-xs font-bold tracking-wide transition-colors"
+                    >
+                      {g}
+                    </Link>
+                  ))}
+                </div>
+              )}
+
               <div className="flex justify-center md:justify-start">
                   <Link
                     to={`/watch/${info.id}`}
@@ -102,6 +117,8 @@ export default function AnimeDetails() {
                {info.description || 'No description available.'}
              </p>
            </section>
+
+           {info.malId && <AnimeTrailer malId={info.malId} />}
 
            {/* Characters */}
            {info.charactersVoiceActors && info.charactersVoiceActors.length > 0 && (
@@ -133,21 +150,20 @@ export default function AnimeDetails() {
               {moreInfo.producers && moreInfo.producers.length > 0 && (
                 <SidebarItem label="Producers" value={moreInfo.producers.join(', ')} />
               )}
-              {moreInfo.genres && moreInfo.genres.length > 0 && (
-                <div className="pt-2">
-                   <p className="text-xs text-white/40 uppercase tracking-widest font-mono mb-2">Genres</p>
-                   <div className="flex flex-wrap gap-2">
-                      {moreInfo.genres.map(g => (
-                         <span key={g} className="text-xs px-2 py-1 rounded bg-white/5 border border-white/10 text-white/80">
-                           {g}
-                         </span>
-                      ))}
-                   </div>
-                </div>
-              )}
            </div>
         </div>
       </div>
+
+      {data.relatedAnimes && data.relatedAnimes.length > 0 && (
+         <div className="max-w-[1600px] mx-auto px-4 md:px-8 mt-16">
+           <h2 className="text-2xl md:text-3xl font-black text-white mb-6">Related Anime</h2>
+           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
+              {data.relatedAnimes.slice(0, 12).map((item: any) => (
+                <AnimeCard key={item.id} anime={item} />
+              ))}
+           </div>
+         </div>
+      )}
 
       {data.recommendedAnimes && data.recommendedAnimes.length > 0 && (
          <div className="max-w-[1600px] mx-auto px-4 md:px-8 mt-16">

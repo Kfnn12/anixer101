@@ -98,7 +98,7 @@ export async function getSuggestions(query: string) {
   const raw = await fetchFromApi(`/api/v2/animekai/search/suggestion?q=${encodeURIComponent(query)}`);
   const d = raw.data || raw;
   return {
-    suggestions: (d.animes || d.data || []).map(normalizeAnime),
+    suggestions: (d.suggestions || d.animes || d.data || []).map(normalizeAnime),
   };
 }
 
@@ -136,6 +136,8 @@ export async function getAnimeDetails(id: string): Promise<AnimeDetails> {
         name: data.title || data.name,
         poster: data.poster || data.posterImage,
         description: data.description || data.synopsis || '',
+        malId: data.externalLinks?.mal ? data.externalLinks.mal.split('/').filter(Boolean).pop() : undefined,
+        anilistId: data.externalLinks?.anilist ? data.externalLinks.anilist.split('/').filter(Boolean).pop() : undefined,
         stats: {
           rating: data.rating,
           quality: data.quality || 'HD',
@@ -284,6 +286,8 @@ export interface AnimeDetails {
       name: string;
       poster: string;
       description: string;
+      malId?: string;
+      anilistId?: string;
       stats: {
         rating?: string;
         quality?: string;
@@ -358,4 +362,17 @@ export interface SourcesData {
   referer?: string;
   intro?: { start: number; end: number };
   outro?: { start: number; end: number };
+}
+
+export interface ScheduleItem {
+  id: string;
+  title: string;
+  time: string;
+  episode: number;
+  url: string;
+}
+
+export async function getSchedule(date: string): Promise<ScheduleItem[]> {
+  const raw = await fetchFromApi(`/api/v2/animekai/schedule?date=${date}`);
+  return raw.schedule || [];
 }

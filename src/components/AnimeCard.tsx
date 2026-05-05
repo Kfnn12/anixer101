@@ -14,7 +14,7 @@ const AnimeCard: React.FC<Props> = ({ anime }) => {
         <img
           src={anime.poster}
           alt={anime.name}
-          className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
+          className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
           loading="lazy"
         />
         <div className="absolute inset-0 bg-gradient-to-tb from-transparent via-black/20 to-black/90 opacity-80 group-hover:opacity-100 transition-opacity" />

@@ -2,18 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import { SourcesData, getM3U8ProxyUrl } from '../lib/api';
 
+import { AlertTriangle, RefreshCw, Server } from 'lucide-react';
+
 interface VideoPlayerProps {
   sourcesData: SourcesData;
+  onEnded?: () => void;
 }
 
-export default function VideoPlayer({ sourcesData }: VideoPlayerProps) {
+export default function VideoPlayer({ sourcesData, onEnded }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const defaultSource = sourcesData.sources.find(s => s.type === 'hls' || s.type === 'iframe') || sourcesData.sources[0];
   const isIframe = defaultSource?.type === 'iframe' || (defaultSource?.url && !defaultSource.url.includes('.m3u8') && !defaultSource.url.includes('.mp4'));
 
   useEffect(() => {
+    setError(null);
     if (!defaultSource) {
       setError('No playable source found.');
       return;
@@ -45,22 +50,23 @@ export default function VideoPlayer({ sourcesData }: VideoPlayerProps) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
               if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR || data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT) {
-                setError(`Network error: Failed to load manifest. Stream might be unavailable.`);
+                setError(`Manifest load error: Stream might be unavailable or blocked. (${data.details})`);
               } else {
-                setError(`Network error: ${data.details}. Attempting recovery...`);
+                setError(`Network error: ${data.details}`);
               }
-              hls?.startLoad();
+              hls?.destroy(); // stop automatic retry, use user manual retry via button
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
-              setError(`Media error: ${data.details}. Attempting recovery...`);
-              hls?.recoverMediaError();
+              setError(`Media playback error: ${data.details}`);
+              hls?.destroy(); // or could try `hls?.recoverMediaError()` but requirements say show retry button
               break;
             case Hls.ErrorTypes.KEY_SYSTEM_ERROR:
-              setError(`DRM/Key System error: ${data.details}.`);
+              setError(`DRM error: ${data.details}`);
+              hls?.destroy();
               break;
             default:
               hls?.destroy();
-              setError(`Fatal video error: ${data.details || 'Unknown'}.`);
+              setError(`Fatal video error: ${data.details || 'Unknown'}`);
               break;
           }
         }
@@ -77,14 +83,43 @@ export default function VideoPlayer({ sourcesData }: VideoPlayerProps) {
         hls.destroy();
       }
     };
-  }, [sourcesData, defaultSource, isIframe]);
+  }, [sourcesData, defaultSource, isIframe, retryCount]);
 
   return (
     <div className="w-full aspect-video bg-black relative rounded-xl overflow-hidden shadow-2xl glass-panel">
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center p-4 z-10">
-          <div className="bg-black/60 rounded-lg p-4 text-center">
-             <p className="text-red-400 font-mono text-sm">{error}</p>
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 z-20 bg-black/90 backdrop-blur-md">
+          <div className="bg-white/[0.03] rounded-2xl p-8 text-center border border-white/10 max-w-lg w-full flex flex-col items-center">
+            <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
+               <AlertTriangle className="w-8 h-8 text-red-500" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Oops! Playback Issue</h3>
+            <p className="text-white/60 text-sm mb-6 leading-relaxed">
+              We encountered a problem while trying to play this video. 
+              <span className="block mt-2 px-3 py-2 bg-black/40 rounded-lg text-red-400 font-mono text-xs text-left overflow-hidden text-ellipsis">
+                {error}
+              </span>
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <button
+                onClick={() => setRetryCount(c => c + 1)}
+                className="flex-1 px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <RefreshCw size={18} />
+                Try Again
+              </button>
+              <div className="relative flex-1 group">
+                <button
+                  className="w-full px-5 py-2.5 bg-accent hover:bg-accent/90 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Server size={18} />
+                  Change Server
+                </button>
+                <div className="absolute top-12 left-1/2 -translate-x-1/2 min-w-max px-3 py-2 bg-black/90 text-xs text-white/80 rounded border border-white/10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all pointer-events-none">
+                  Select a different server below the player
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -103,6 +138,7 @@ export default function VideoPlayer({ sourcesData }: VideoPlayerProps) {
           className="w-full h-full relative z-0"
           crossOrigin="anonymous" // required for subtitles sometimes
           poster={sourcesData.intro ? undefined : undefined} // Not provided in source directly, but usually we have it on page
+          onEnded={onEnded}
           onError={(e) => {
             const mediaError = (e.target as HTMLVideoElement).error;
             if (mediaError) {
