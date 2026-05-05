@@ -1,7 +1,7 @@
 export const BASE_API_URL = 'https://xerv2.vercel.app';
 
-let PROXY_1 = 'https://animepahe-proxy.mdtahseen7378.workers.dev/proxy/m3u8-proxy?url=';
-let PROXY_2 = 'https://animepahe-proxy.mdtahseen7378.workers.dev/m3u8?url=';
+let PROXY_1 = 'https://animxer-proxy.vercel.app/proxy/m3u8-proxy?url=';
+let PROXY_2 = 'https://animxer-proxy.vercel.app/m3u8?url=';
 
 try {
   if (import.meta && import.meta.env) {
