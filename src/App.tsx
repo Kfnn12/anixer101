@@ -11,10 +11,22 @@ import Privacy from './pages/Privacy';
 import DMCA from './pages/DMCA';
 import Contact from './pages/Contact';
 
+import { Toaster } from 'react-hot-toast';
+
 export default function App() {
   return (
     <Router>
       <div className="min-h-screen text-white relative">
+        <Toaster
+          position="bottom-center"
+          toastOptions={{
+            style: {
+              background: '#1a1a1a',
+              color: '#fff',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+            },
+          }}
+        />
         <div className="atmosphere-bg" />
         <Navbar />
         <main className="relative z-10 w-full overflow-hidden">

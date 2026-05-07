@@ -5,6 +5,7 @@ import VideoPlayer from '../components/VideoPlayer';
 import AnimeCard from '../components/AnimeCard';
 import { ArrowLeft, Server, PlayCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
+import toast from 'react-hot-toast';
 
 import { useContinueWatching } from '../hooks/useContinueWatching';
 
@@ -130,6 +131,7 @@ export default function WatchEpisode() {
         }
       } catch (err) {
         console.error(err);
+        toast.error("Failed to load episode data. It might be unavailable.");
       } finally {
         setLoading(false);
       }
@@ -148,6 +150,7 @@ export default function WatchEpisode() {
         setSources(data);
       } catch (error) {
         console.error(error);
+        toast.error("Failed to load video source for the selected server.");
         setSources(null);
       } finally {
         setSourcesLoading(false);

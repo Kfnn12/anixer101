@@ -3,6 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { getHome, getCategory, getAZList, getGenre, Anime } from '../lib/api';
 import AnimeCard from '../components/AnimeCard';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const LIST_TITLES: Record<string, string> = {
   trending: 'Trending Now',
@@ -42,7 +43,7 @@ export default function List({ isGenre = false }: { isGenre?: boolean }) {
       setError(null);
       try {
         let fetchType = type;
-        if (type === 'updated') fetchType = 'recently-updated';
+        if (type === 'updated') fetchType = 'updates';
         
         let fetchedPage = false;
         
@@ -55,15 +56,7 @@ export default function List({ isGenre = false }: { isGenre?: boolean }) {
               setTotalPages(res.totalPages);
               fetchedPage = true;
             }
-          } else if (fetchType === 'recently-updated') {
-            const res = await getAZList('recently-updated', page);
-            if (res && res.animes && res.animes.length > 0) {
-              setItems(res.animes);
-              setHasNextPage(res.hasNextPage);
-              setTotalPages(res.totalPages);
-              fetchedPage = true;
-            }
-          } else if (['trending', 'completed', 'upcoming', 'movie', 'tv'].includes(fetchType || '')) {
+          } else if (['trending', 'completed', 'upcoming', 'movie', 'tv', 'updates'].includes(fetchType || '')) {
             const res = await getCategory(fetchType!, page);
             if (res && res.animes && res.animes.length > 0) {
               setItems(res.animes);
@@ -109,7 +102,9 @@ export default function List({ isGenre = false }: { isGenre?: boolean }) {
         }
       } catch (err) {
         console.error(err);
-        setError("We couldn't load the anime list. Our servers might be experiencing a hiccup.");
+        const errorMsg = "We couldn't load the anime list. Our servers might be experiencing a hiccup.";
+        setError(errorMsg);
+        toast.error(errorMsg);
       } finally {
         setLoading(false);
       }

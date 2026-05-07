@@ -5,6 +5,7 @@ import { Play } from 'lucide-react';
 import AnimeCard from '../components/AnimeCard';
 import AnimeTrailer from '../components/AnimeTrailer';
 import ContinueWatching from '../components/ContinueWatching';
+import toast from 'react-hot-toast';
 
 export default function AnimeDetails() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +22,7 @@ export default function AnimeDetails() {
         setData(details);
       } catch (err) {
         console.error(err);
+        toast.error("Failed to load anime details");
       } finally {
         setLoading(false);
       }

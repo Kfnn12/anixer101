@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getSchedule, ScheduleItem } from '../lib/api';
 import { Link } from 'react-router-dom';
 import { Clock } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function ScheduleSection() {
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
@@ -16,6 +17,7 @@ export default function ScheduleSection() {
         setSchedule(data);
       } catch (err) {
         console.error("Failed to load schedule", err);
+        toast.error("Failed to load estimated schedule.");
       } finally {
         setLoading(false);
       }

@@ -45,8 +45,8 @@ export default function Navbar() {
     { to: "/az-list", label: "A-Z List" },
     { to: "/list/movie", label: "Movies" },
     { to: "/list/tv", label: "TV Series" },
-    { to: "/list/most-popular", label: "Most Popular" },
-    { to: "/list/top-airing", label: "Top Airing" },
+    { to: "/list/trending", label: "Trending" },
+    { to: "/list/upcoming", label: "Upcoming" },
   ];
 
   return (

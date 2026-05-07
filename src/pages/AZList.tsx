@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { getAZList, Anime } from '../lib/api';
 import AnimeCard from '../components/AnimeCard';
+import toast from 'react-hot-toast';
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -33,6 +34,7 @@ export default function AZList() {
       } catch (err) {
         console.error(err);
         setItems([]);
+        toast.error('Failed to load anime list. Please try again later.');
       } finally {
         setLoading(false);
       }

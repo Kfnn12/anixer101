@@ -5,6 +5,7 @@ import AnimeCard from '../components/AnimeCard';
 import SpotlightCarousel from '../components/SpotlightCarousel';
 import ScheduleSection from '../components/ScheduleSection';
 import ContinueWatching from '../components/ContinueWatching';
+import toast from 'react-hot-toast';
 
 export default function Home() {
   const [data, setData] = useState<HomeData | null>(null);
@@ -14,9 +15,14 @@ export default function Home() {
     async function loadData() {
       try {
         const homeData = await getHome();
-        setData(homeData);
+        if (!homeData || Object.keys(homeData).length === 0 || (!homeData.spotlightAnimes?.length && !homeData.trendingAnimes?.length)) {
+          toast.error("Failed to load anime content");
+        } else {
+          setData(homeData);
+        }
       } catch (err) {
         console.error(err);
+        toast.error("Network error: Could not fetch home data");
       } finally {
         setLoading(false);
       }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { searchAnime } from '../lib/api';
 import AnimeCard from '../components/AnimeCard';
+import toast from 'react-hot-toast';
 
 export default function Search() {
   const [searchParams] = useSearchParams();
@@ -25,7 +26,9 @@ export default function Search() {
         setResults(res.animes || []);
       } catch (err) {
         console.error(err);
-        setError('Failed to search anime. Please try again.');
+        const errorMsg = 'Failed to search anime. Please try again.';
+        setError(errorMsg);
+        toast.error(errorMsg);
       } finally {
         setLoading(false);
       }
