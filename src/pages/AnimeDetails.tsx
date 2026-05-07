@@ -4,6 +4,7 @@ import { getAnimeDetails, AnimeDetails as AnimeDetailsType } from '../lib/api';
 import { Play } from 'lucide-react';
 import AnimeCard from '../components/AnimeCard';
 import AnimeTrailer from '../components/AnimeTrailer';
+import ContinueWatching from '../components/ContinueWatching';
 
 export default function AnimeDetails() {
   const { id } = useParams<{ id: string }>();
@@ -111,6 +112,8 @@ export default function AnimeDetails() {
       <div className="max-w-[1600px] mx-auto px-4 md:px-8 mt-24 md:mt-12 grid grid-cols-1 lg:grid-cols-3 gap-12">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-12">
+           <ContinueWatching animeId={id} />
+
            <section>
              <h2 className="text-2xl font-black text-white mb-4">Synopsis</h2>
              <p className="text-white/70 leading-relaxed text-lg whitespace-pre-wrap font-sans">

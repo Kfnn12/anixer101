@@ -8,9 +8,11 @@ import { AlertTriangle, RefreshCw, Server } from 'lucide-react';
 interface VideoPlayerProps {
   sourcesData: SourcesData;
   onEnded?: () => void;
+  onProgress?: (currentTime: number, duration: number) => void;
+  startTime?: number;
 }
 
-export default function VideoPlayer({ sourcesData, onEnded }: VideoPlayerProps) {
+export default function VideoPlayer({ sourcesData, onEnded, onProgress, startTime }: VideoPlayerProps) {
   const artRef = useRef<HTMLDivElement>(null);
   const [errorInfo, setErrorInfo] = useState<{ title: string; message: string; suggestion: string; canRetry: boolean } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -163,6 +165,22 @@ export default function VideoPlayer({ sourcesData, onEnded }: VideoPlayerProps) 
 
     if (onEnded) {
       art.on('video:ended', onEnded);
+    }
+    
+    if (onProgress) {
+      art.on('video:timeupdate', () => {
+        if (art.video && art.duration) {
+          onProgress(art.currentTime, art.duration);
+        }
+      });
+    }
+
+    if (startTime) {
+      art.on('ready', () => {
+        if (art.video) {
+          art.video.currentTime = startTime;
+        }
+      });
     }
     
     art.on('video:error', (e) => {

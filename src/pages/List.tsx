@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { getHome, getCategory, getAZList, getGenre, Anime } from '../lib/api';
 import AnimeCard from '../components/AnimeCard';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 const LIST_TITLES: Record<string, string> = {
   trending: 'Trending Now',
@@ -30,12 +31,15 @@ export default function List({ isGenre = false }: { isGenre?: boolean }) {
   
   const [items, setItems] = useState<Anime[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     async function loadData() {
       setLoading(true);
+      setError(null);
       try {
         let fetchType = type;
         if (type === 'updated') fetchType = 'recently-updated';
@@ -105,13 +109,14 @@ export default function List({ isGenre = false }: { isGenre?: boolean }) {
         }
       } catch (err) {
         console.error(err);
+        setError("We couldn't load the anime list. Our servers might be experiencing a hiccup.");
       } finally {
         setLoading(false);
       }
     }
     loadData();
     window.scrollTo(0, 0);
-  }, [type, page]);
+  }, [type, page, retryCount]);
 
   const title = isGenre ? `${type ? type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : ''} Anime` : (type ? LIST_TITLES[type] || 'Anime List' : 'Anime List');
 
@@ -157,6 +162,21 @@ export default function List({ isGenre = false }: { isGenre?: boolean }) {
       {loading ? (
         <div className="flex justify-center py-20">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+          <div className="bg-red-500/10 p-4 rounded-full mb-4">
+            <AlertTriangle className="w-8 h-8 text-red-500" />
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Oops! Something went wrong</h3>
+          <p className="text-white/60 mb-6 max-w-md">{error}</p>
+          <button
+            onClick={() => setRetryCount(c => c + 1)}
+            className="flex items-center gap-2 px-6 py-3 rounded-full bg-accent hover:bg-accent/90 text-white font-medium transition-colors"
+          >
+            <RefreshCw className="w-5 h-5" />
+            Try Again
+          </button>
         </div>
       ) : items.length > 0 ? (
         <>

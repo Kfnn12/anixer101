@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getAnimeEpisodes, getEpisodeServers, getEpisodeSources, Episode, ServersData, SourcesData, getAnimeDetails, AnimeDetails } from '../lib/api';
 import VideoPlayer from '../components/VideoPlayer';
 import AnimeCard from '../components/AnimeCard';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Server, PlayCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
+
+import { useContinueWatching } from '../hooks/useContinueWatching';
 
 export default function WatchEpisode() {
   const { episodeId } = useParams<{ episodeId: string }>();
   const navigate = useNavigate();
+  const { saveProgress, getEpisodeProgress } = useContinueWatching();
   
   const [animeId, setAnimeId] = useState<string>('');
   const [details, setDetails] = useState<AnimeDetails | null>(null);
@@ -62,6 +65,30 @@ export default function WatchEpisode() {
       if (currentIndex !== -1 && currentIndex < episodes.length - 1) {
         setAutoPlayCountdown(5); // 5 seconds countdown
       }
+    }
+  };
+
+  const lastSaveTime = useRef<number>(0);
+
+  const handleVideoProgress = (currentTime: number, duration: number) => {
+    if (!animeId || !details || !episodeId) return;
+    
+    // Throttle to save at most once every 5 seconds
+    const now = Date.now();
+    if (now - lastSaveTime.current < 5000) return;
+    
+    if (currentTime > 5 && duration > 0) {
+      lastSaveTime.current = now;
+      const currentEp = episodes.find(e => e.episodeId === episodeId);
+      saveProgress({
+        animeId,
+        animeTitle: details.anime.info.name,
+        poster: details.anime.info.poster,
+        episodeId,
+        episodeNumber: currentEp?.number || 1,
+        progress: currentTime,
+        duration: duration
+      });
     }
   };
 
@@ -160,7 +187,12 @@ export default function WatchEpisode() {
                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
             </div>
           ) : sources && sources.sources.length > 0 ? (
-            <VideoPlayer sourcesData={sources} onEnded={handleVideoEnded} />
+            <VideoPlayer 
+              sourcesData={sources} 
+              onEnded={handleVideoEnded}
+              onProgress={handleVideoProgress}
+              startTime={getEpisodeProgress(episodeId!)?.progress || 0}
+            />
           ) : (
             <div className="w-full aspect-video bg-black/50 relative rounded-xl overflow-hidden glass-panel flex items-center justify-center text-white/50">
                Failed to load video source for the selected server.
@@ -214,49 +246,61 @@ export default function WatchEpisode() {
 
         {/* Server Selection */}
         {servers && (
-          <div className="glass-panel p-6 rounded-xl space-y-6">
-            <div className="flex items-center gap-2 border-b border-white/10 pb-4">
-              <span className="text-sm font-mono tracking-widest uppercase text-white/50">Version:</span>
-              <div className="flex bg-black/40 rounded-lg p-1">
-                {(['sub', 'dub', 'raw'] as const).map(cat => {
-                   if (!servers[cat] || servers[cat].length === 0) return null;
-                   return (
-                     <button
-                       key={cat}
-                       onClick={() => {
-                         setActiveCategory(cat);
-                         setActiveServer(servers[cat][0].serverName);
-                       }}
-                       className={cn(
-                         "px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-colors",
-                         activeCategory === cat ? "bg-white/10 text-white" : "text-white/40 hover:text-white/80"
-                       )}
-                     >
-                       {cat}
-                     </button>
-                   );
-                })}
-              </div>
+          <div className="glass-panel p-6 rounded-xl flex flex-col gap-6">
+            <div className="flex items-center gap-3">
+              <Server className="w-5 h-5 text-accent" />
+              <h3 className="text-lg font-bold text-white">Select Server</h3>
             </div>
             
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-mono tracking-widest uppercase text-white/50">Servers:</span>
-              <div className="flex flex-wrap gap-2">
-                {servers[activeCategory]?.map((srv) => (
-                  <button
-                    key={srv.serverName}
-                    onClick={() => setActiveServer(srv.serverName)}
-                    className={cn(
-                      "px-4 py-2 rounded-lg text-sm transition-colors border",
-                      activeServer === srv.serverName 
-                        ? "bg-accent/20 border-accent text-accent" 
-                        : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20 text-white/70"
-                    )}
-                  >
-                    {srv.serverName}
-                  </button>
-                ))}
-              </div>
+            <div className="flex flex-col gap-6">
+              {(['sub', 'dub', 'raw'] as const).map(cat => {
+                if (!servers[cat] || servers[cat].length === 0) return null;
+                return (
+                  <div key={cat} className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-md",
+                        cat === 'sub' ? "bg-white/10 text-white" : 
+                        cat === 'dub' ? "bg-accent/20 text-accent" : 
+                        "bg-yellow-500/20 text-yellow-500"
+                      )}>
+                        {cat}
+                      </span>
+                      <div className="h-px bg-white/10 flex-1 ml-2" />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                      {servers[cat]?.map((srv) => {
+                        const isActive = activeCategory === cat && activeServer === srv.serverName;
+                        return (
+                          <button
+                            key={srv.serverName}
+                            onClick={() => {
+                              setActiveCategory(cat);
+                              setActiveServer(srv.serverName);
+                            }}
+                            className={cn(
+                              "relative flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 overflow-hidden group border",
+                              isActive
+                                ? "bg-accent/10 border-accent text-accent shadow-[0_0_15px_-3px_rgba(225,29,72,0.3)]"
+                                : "bg-white/5 border-white/5 text-white/70 hover:bg-white/10 hover:border-white/20 hover:text-white"
+                            )}
+                          >
+                            {isActive && (
+                              <span className="absolute inset-x-0 bottom-0 h-1 bg-accent/80 shadow-[0_0_10px_rgba(225,29,72,0.8)]" />
+                            )}
+                            <PlayCircle className={cn(
+                              "w-4 h-4 transition-transform duration-300 flex-shrink-0",
+                              isActive ? "fill-accent text-transparent scale-110" : "group-hover:scale-110"
+                            )} />
+                            <span className="truncate">{srv.serverName}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

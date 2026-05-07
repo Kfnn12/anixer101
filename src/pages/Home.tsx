@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import AnimeCard from '../components/AnimeCard';
 import SpotlightCarousel from '../components/SpotlightCarousel';
 import ScheduleSection from '../components/ScheduleSection';
+import ContinueWatching from '../components/ContinueWatching';
 
 export default function Home() {
   const [data, setData] = useState<HomeData | null>(null);
@@ -40,6 +41,7 @@ export default function Home() {
       )}
 
       <div className="max-w-[1600px] mx-auto px-4 md:px-8 mt-12 space-y-16">
+        <ContinueWatching />
         <AnimeSection title="Trending Now" items={data.trendingAnimes} href="/list/trending" />
         <AnimeSection title="Recently Updated" items={data.latestEpisodeAnimes} href="/list/updated" />
         <ScheduleSection />
