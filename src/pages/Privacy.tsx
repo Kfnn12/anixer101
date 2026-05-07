@@ -1,6 +1,6 @@
 export default function Privacy() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-24 min-h-screen">
+    <div className="max-w-4xl mx-auto px-4 py-24 min-h-[100dvh]">
       <h1 className="text-3xl md:text-5xl font-black text-white mb-8">Privacy Policy</h1>
       <div className="prose prose-invert max-w-none text-white/70">
         <p className="mb-4">At Animxer, one of our main priorities is the privacy of our visitors. This Privacy Policy document contains types of information that is collected and recorded by Animxer and how we use it.</p>

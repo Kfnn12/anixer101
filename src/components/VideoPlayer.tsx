@@ -3,19 +3,29 @@ import Hls from 'hls.js';
 import Artplayer from 'artplayer';
 import { SourcesData, getM3U8ProxyUrl } from '../lib/api';
 
-import { AlertTriangle, RefreshCw, Server } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Server, ChevronDown } from 'lucide-react';
+import { cn } from '../lib/utils';
+
+export interface ServerOption {
+  name: string;
+  category: string;
+}
 
 interface VideoPlayerProps {
   sourcesData: SourcesData;
   onEnded?: () => void;
   onProgress?: (currentTime: number, duration: number) => void;
   startTime?: number;
+  availableServers?: ServerOption[];
+  activeServer?: string;
+  onSelectServer?: (serverName: string, category: string) => void;
 }
 
-export default function VideoPlayer({ sourcesData, onEnded, onProgress, startTime }: VideoPlayerProps) {
+export default function VideoPlayer({ sourcesData, onEnded, onProgress, startTime, availableServers, activeServer, onSelectServer }: VideoPlayerProps) {
   const artRef = useRef<HTMLDivElement>(null);
   const [errorInfo, setErrorInfo] = useState<{ title: string; message: string; suggestion: string; canRetry: boolean } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [showServerMenu, setShowServerMenu] = useState(false);
 
   const defaultSource = sourcesData.sources.find(s => s.type === 'hls' || s.type === 'iframe') || sourcesData.sources[0];
   const isIframe = defaultSource?.type === 'iframe' || (defaultSource?.url && !defaultSource.url.includes('.m3u8') && !defaultSource.url.includes('.mp4'));
@@ -183,16 +193,44 @@ export default function VideoPlayer({ sourcesData, onEnded, onProgress, startTim
       });
     }
     
-    art.on('video:error', (e) => {
-      const errorMsg = 'An unexpected video error occurred.';
-      if (!errorInfo) {
-        setErrorInfo({
-          title: 'Video Error',
-          message: errorMsg,
-          suggestion: 'Please try selecting a different server.',
-          canRetry: true
-        });
-      }
+    art.on('video:error', () => {
+      setErrorInfo(prev => {
+        if (prev) return prev;
+        const vError = art.video?.error;
+        let title = 'Playback Error';
+        let message = 'An unexpected video error occurred.';
+        let suggestion = 'Please try selecting a different server.';
+        let canRetry = true;
+        
+        if (vError) {
+          switch (vError.code) {
+            case 1: // MEDIA_ERR_ABORTED
+              title = 'Playback Aborted';
+              message = 'The video playback was aborted.';
+              suggestion = 'Please try playing the video again.';
+              break;
+            case 2: // MEDIA_ERR_NETWORK
+              title = 'Network Error';
+              message = 'A network error caused the video download to fail.';
+              suggestion = 'Check your internet connection and try reloading.';
+              break;
+            case 3: // MEDIA_ERR_DECODE
+              title = 'Media Decoding Error';
+              message = 'The video could not be decoded due to a device limitation or corruption.';
+              suggestion = 'Try switching to a different server or use another device browser.';
+              canRetry = false;
+              break;
+            case 4: // MEDIA_ERR_SRC_NOT_SUPPORTED
+              title = 'Format Unsupported';
+              message = 'The video format is not supported by your browser or the source is dead.';
+              suggestion = 'Please select a different server from the list options.';
+              canRetry = false;
+              break;
+          }
+        }
+        
+        return { title, message, suggestion, canRetry };
+      });
     });
 
     return () => {
@@ -226,17 +264,49 @@ export default function VideoPlayer({ sourcesData, onEnded, onProgress, startTim
                   Try Again
                 </button>
               )}
-              <div className="relative flex-1 group">
-                <button
-                  className="w-full px-5 py-2.5 bg-accent hover:bg-accent/90 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <Server size={18} />
-                  Change Server
-                </button>
-                <div className="absolute top-12 left-1/2 -translate-x-1/2 min-w-max px-3 py-2 bg-black/90 text-xs text-white/80 rounded border border-white/10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all pointer-events-none">
-                  Select a different server below the player
+              {onSelectServer && availableServers && availableServers.length > 1 ? (
+                <div className="relative flex-1">
+                  <button
+                    onClick={() => setShowServerMenu(!showServerMenu)}
+                    className="w-full px-5 py-2.5 bg-accent hover:bg-accent/90 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Server size={18} />
+                    Change Server
+                    <ChevronDown size={14} className={cn("transition-transform", showServerMenu && "rotate-180")} />
+                  </button>
+                  {showServerMenu && (
+                    <div className="absolute bottom-14 w-full bg-[#1a1a24] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-30">
+                      <div className="max-h-48 overflow-y-auto p-2 flex flex-col gap-1">
+                        {availableServers.filter(s => s.name !== activeServer).map(srv => (
+                          <button
+                            key={`${srv.category}-${srv.name}`}
+                            onClick={() => {
+                              setShowServerMenu(false);
+                              onSelectServer(srv.name, srv.category);
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-white/10 rounded-lg text-sm text-white/80 hover:text-white transition-colors"
+                          >
+                             <span className="uppercase text-[10px] font-bold text-accent mr-2">{srv.category}</span>
+                             {srv.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              ) : (
+                <div className="relative flex-1 group">
+                  <button
+                    className="w-full px-5 py-2.5 bg-accent hover:bg-accent/90 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2 cursor-help"
+                  >
+                    <Server size={18} />
+                    Change Server
+                  </button>
+                  <div className="absolute top-12 left-1/2 -translate-x-1/2 min-w-max px-3 py-2 bg-black/90 text-xs text-white/80 rounded border border-white/10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all pointer-events-none">
+                    Select a different server below the player
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

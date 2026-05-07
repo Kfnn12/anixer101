@@ -1,6 +1,6 @@
 export default function DMCA() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-24 min-h-screen">
+    <div className="max-w-4xl mx-auto px-4 py-24 min-h-[100dvh]">
       <h1 className="text-3xl md:text-5xl font-black text-white mb-8">DMCA Policy</h1>
       <div className="prose prose-invert max-w-none text-white/70">
         <p className="mb-4">Animxer respects the intellectual property rights of others and expects its users to do the same. It is Animxer's policy, in appropriate circumstances and at its discretion, to disable and/or terminate the accounts of users who repeatedly infringe or are repeatedly charged with infringing the copyrights or other intellectual property rights of others.</p>

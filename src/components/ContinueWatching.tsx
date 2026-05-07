@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { WatchProgress, useContinueWatching } from '../hooks/useContinueWatching';
-import { Play, X } from 'lucide-react';
+import { Play, X, Clock } from 'lucide-react';
 
 export default function ContinueWatching({ animeId }: { animeId?: string }) {
   const { history, removeProgress } = useContinueWatching();
@@ -10,7 +10,32 @@ export default function ContinueWatching({ animeId }: { animeId?: string }) {
     displayedHistory = history.filter(h => h.animeId === animeId);
   }
 
-  if (!displayedHistory || displayedHistory.length === 0) return null;
+  if (!displayedHistory || displayedHistory.length === 0) {
+    if (animeId) return null; // Only show empty state on Home page, not on Anime Details
+    
+    return (
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-black text-white">Continue Watching</h2>
+        </div>
+        <div className="glass-panel p-8 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center">
+          <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-white/20 mb-4">
+            <Clock className="w-8 h-8" />
+          </div>
+          <h3 className="text-lg font-bold text-white mb-2">No Watch History</h3>
+          <p className="text-white/50 max-w-sm text-sm mb-6">
+            Anime you start watching will appear here so you can easily pick up where you left off.
+          </p>
+          <Link 
+            to="/list/trending" 
+            className="px-6 py-2.5 rounded-xl bg-accent hover:bg-accent/90 text-white font-bold transition-colors"
+          >
+            Find something to watch
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section>
@@ -20,7 +45,6 @@ export default function ContinueWatching({ animeId }: { animeId?: string }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {displayedHistory.slice(0, 4).map((item) => {
           const progressPercent = item.duration > 0 ? (item.progress / item.duration) * 100 : 0;
-
           
           return (
             <div key={item.animeId} className="relative group glass-panel rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:shadow-accent/20 hover:border-accent/40 flex flex-col">

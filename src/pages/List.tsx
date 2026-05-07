@@ -129,7 +129,7 @@ export default function List({ isGenre = false }: { isGenre?: boolean }) {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-12 min-h-screen">
+    <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-12 min-h-[100dvh]">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <h1 className="text-3xl font-black text-white tracking-tight">{title} <span className="text-white/40 text-lg font-medium ml-2">Page {page}</span></h1>
         

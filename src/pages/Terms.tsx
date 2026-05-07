@@ -1,6 +1,6 @@
 export default function Terms() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-24 min-h-screen">
+    <div className="max-w-4xl mx-auto px-4 py-24 min-h-[100dvh]">
       <h1 className="text-3xl md:text-5xl font-black text-white mb-8">Terms of Service</h1>
       <div className="prose prose-invert max-w-none text-white/70">
         <p className="mb-4">Welcome to Animxer. By accessing our website, you agree to these Terms of Service. Please read them carefully.</p>

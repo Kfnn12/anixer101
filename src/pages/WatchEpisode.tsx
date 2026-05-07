@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getAnimeEpisodes, getEpisodeServers, getEpisodeSources, Episode, ServersData, SourcesData, getAnimeDetails, AnimeDetails, ApiError } from '../lib/api';
 import VideoPlayer from '../components/VideoPlayer';
@@ -35,6 +35,20 @@ export default function WatchEpisode() {
   });
   
   const [autoPlayCountdown, setAutoPlayCountdown] = useState<number | null>(null);
+
+  const allAvailableServers = useMemo(() => {
+    if (!servers) return [];
+    const list: { name: string; category: string }[] = [];
+    servers.sub.forEach(s => list.push({ name: s.serverName, category: 'sub' }));
+    servers.dub.forEach(s => list.push({ name: s.serverName, category: 'dub' }));
+    servers.raw.forEach(s => list.push({ name: s.serverName, category: 'raw' }));
+    return list;
+  }, [servers]);
+
+  const handleServerSelect = (serverName: string, category: string) => {
+    setActiveCategory(category as any);
+    setActiveServer(serverName);
+  };
 
   useEffect(() => {
     localStorage.setItem('autoPlayEnabled', String(autoPlayEnabled));
@@ -169,7 +183,7 @@ export default function WatchEpisode() {
 
   if (loading) {
      return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-[100dvh] items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
       </div>
     );
@@ -177,14 +191,14 @@ export default function WatchEpisode() {
 
   if (errorMsg || !details) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] flex items-center justify-center p-4">
         <ErrorState message={errorMsg || "We couldn't play this episode right now."} onRetry={() => setRetryCount(c => c + 1)} />
       </div>
     );
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-8 min-h-screen flex flex-col gap-12">
+    <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-8 min-h-[100dvh] flex flex-col gap-12">
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
         {/* Player Area */}
         <div className="xl:col-span-3 space-y-6">
@@ -215,6 +229,9 @@ export default function WatchEpisode() {
               onEnded={handleVideoEnded}
               onProgress={handleVideoProgress}
               startTime={getEpisodeProgress(episodeId!)?.progress || 0}
+              availableServers={allAvailableServers}
+              activeServer={activeServer}
+              onSelectServer={handleServerSelect}
             />
           ) : (
             <div className="w-full aspect-video bg-black/50 relative rounded-xl overflow-hidden glass-panel flex items-center justify-center text-white/50">

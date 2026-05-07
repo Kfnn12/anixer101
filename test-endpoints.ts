@@ -1,20 +1,11 @@
 // @ts-nocheck
-(globalThis as any).import = { meta: { env: { VITE_API_URL: 'https://xerv2.vercel.app', VITE_VIDCLOUD_PROXY: '', VITE_VIDSTREAMING_PROXY: '' } } };
-import { getHome, searchAnime, getSuggestions, getCategory, getRecent, getGenre, getFormat, getAZList, getAnimeDetails, getAnimeEpisodes, getEpisodeServers, getEpisodeSources } from './src/lib/api.ts';
-
 const tests = [
-  { name: 'getHome', fn: () => getHome() },
-  { name: 'searchAnime', fn: () => searchAnime('one piece') },
-  { name: 'getSuggestions', fn: () => getSuggestions('one piece') },
-  { name: 'getCategory', fn: () => getCategory('subbed') },
-  { name: 'getRecent', fn: () => getRecent('recently-updated') },
-  { name: 'getGenre', fn: () => getGenre('action') },
-  { name: 'getFormat', fn: () => getFormat('tv') },
-  { name: 'getAZList', fn: () => getAZList('0-9') },
-  { name: 'getAnimeDetails', fn: () => getAnimeDetails('one-piece-dk6r') },
-  { name: 'getAnimeEpisodes', fn: () => getAnimeEpisodes('one-piece-dk6r') },
-  { name: 'getEpisodeServers', fn: () => getEpisodeServers('one-piece-dk6r?ep=1') },
-  { name: 'getEpisodeSources', fn: () => getEpisodeSources('one-piece-dk6r?ep=1') }
+  { name: 'test-search-params', fn: async () => {
+      let res = await fetch('https://xerv2.vercel.app/api/v2/animekai/advanced-search/filter');
+      console.log('adv-search/filter', res.status);
+      res = await fetch('https://xerv2.vercel.app/api/v2/animekai/search/filter');
+      console.log('search/filter', res.status);
+  }}
 ];
 
 async function run() {

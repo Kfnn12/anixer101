@@ -9,7 +9,7 @@ export default function Contact() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-24 min-h-screen">
+    <div className="max-w-3xl mx-auto px-4 py-24 min-h-[100dvh]">
       <h1 className="text-3xl md:text-5xl font-black text-white mb-2">Contact Us</h1>
       <p className="text-white/60 mb-8 max-w-xl">Have a question, feedback, or DMCA takedown request? Fill out the form below and we'll get back to you as soon as possible.</p>
 

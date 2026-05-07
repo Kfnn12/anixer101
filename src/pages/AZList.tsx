@@ -69,7 +69,7 @@ export default function AZList() {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-12 min-h-screen">
+    <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-12 min-h-[100dvh]">
       <h1 className="text-3xl font-black mb-6 text-white tracking-tight">
         A-Z List: {currentLetter.toUpperCase()} <span className="text-white/40 text-lg font-medium ml-2">Page {page}</span>
       </h1>

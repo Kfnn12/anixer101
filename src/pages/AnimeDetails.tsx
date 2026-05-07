@@ -36,7 +36,7 @@ export default function AnimeDetails() {
 
   if (loading) {
      return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-[100dvh] items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
       </div>
     );
@@ -44,7 +44,7 @@ export default function AnimeDetails() {
 
   if (errorMsg || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] flex items-center justify-center p-4">
         <ErrorState message={errorMsg || "Anime not found."} onRetry={() => setRetryCount(c => c + 1)} />
       </div>
     );

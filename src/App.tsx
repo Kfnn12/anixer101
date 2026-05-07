@@ -19,6 +19,7 @@ function AnimatedRoutes() {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait">
+      {/* @ts-ignore */}
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={<PageTransition><Home /></PageTransition>} />
         <Route path="/search" element={<PageTransition><Search /></PageTransition>} />
@@ -40,7 +41,7 @@ function AnimatedRoutes() {
 export default function App() {
   return (
     <Router>
-      <div className="min-h-screen text-white relative">
+      <div className="min-h-[100dvh] text-white relative">
         <Toaster
           position="bottom-center"
           toastOptions={{

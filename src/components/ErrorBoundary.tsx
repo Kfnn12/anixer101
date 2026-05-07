@@ -43,6 +43,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </p>
             <button
               onClick={() => {
+                // @ts-ignore
                 this.setState({ hasError: false, error: null });
                 window.location.reload();
               }}
@@ -56,6 +57,7 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
+    // @ts-ignore
     return this.props.children;
   }
 }
