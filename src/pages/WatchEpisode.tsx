@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getAnimeEpisodes, getEpisodeServers, getEpisodeSources, Episode, ServersData, SourcesData, getAnimeDetails, AnimeDetails } from '../lib/api';
 import VideoPlayer from '../components/VideoPlayer';
+import AnimeCard from '../components/AnimeCard';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -138,9 +139,10 @@ export default function WatchEpisode() {
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-8 min-h-screen grid grid-cols-1 xl:grid-cols-4 gap-8">
-      {/* Player Area */}
-      <div className="xl:col-span-3 space-y-6">
+    <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-8 min-h-screen flex flex-col gap-12">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+        {/* Player Area */}
+        <div className="xl:col-span-3 space-y-6">
         <div className="flex items-center gap-4">
           <Link to={`/anime/${animeId}`} className="p-2 rounded-full glass-panel hover:text-accent transition-colors">
             <ArrowLeft className="w-5 h-5" />
@@ -300,6 +302,23 @@ export default function WatchEpisode() {
           ))}
         </div>
       </div>
+      </div>
+
+      {details && details.relatedAnimes && details.relatedAnimes.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-black text-white">Recommended For You</h2>
+          </div>
+          <div className="flex overflow-x-auto gap-4 pb-6 snap-x custom-scrollbar">
+            {details.relatedAnimes.map((anime) => (
+              <div key={anime.id} className="min-w-[160px] md:min-w-[200px] snap-start">
+                <AnimeCard anime={anime} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
     </div>
   );
 }

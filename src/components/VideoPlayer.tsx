@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
+import Artplayer from 'artplayer';
 import { SourcesData, getM3U8ProxyUrl } from '../lib/api';
 
 import { AlertTriangle, RefreshCw, Server } from 'lucide-react';
@@ -10,104 +11,203 @@ interface VideoPlayerProps {
 }
 
 export default function VideoPlayer({ sourcesData, onEnded }: VideoPlayerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [error, setError] = useState<string | null>(null);
+  const artRef = useRef<HTMLDivElement>(null);
+  const [errorInfo, setErrorInfo] = useState<{ title: string; message: string; suggestion: string; canRetry: boolean } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
   const defaultSource = sourcesData.sources.find(s => s.type === 'hls' || s.type === 'iframe') || sourcesData.sources[0];
   const isIframe = defaultSource?.type === 'iframe' || (defaultSource?.url && !defaultSource.url.includes('.m3u8') && !defaultSource.url.includes('.mp4'));
 
   useEffect(() => {
-    setError(null);
+    setErrorInfo(null);
     if (!defaultSource) {
-      setError('No playable source found.');
+      setErrorInfo({
+        title: 'No Playable Source',
+        message: 'We could not find a supported video source for this episode.',
+        suggestion: 'Please try selecting a different server from the options below.',
+        canRetry: false
+      });
       return;
     }
 
     if (isIframe) {
-      // Nothing needed for iframe rendering logic here
       return;
     }
 
-    const video = videoRef.current;
-    if (!video) return;
+    if (!artRef.current) return;
 
     let hls: Hls | null = null;
     const originalUrl = defaultSource.url;
-    // Apply proxy to m3u8 url to bypass CORS issues
+    // Apply proxy to m3u8 url to bypass CORS issues if needed
     const url = (defaultSource.type === 'hls' || originalUrl.includes('.m3u8')) 
       ? getM3U8ProxyUrl(originalUrl) 
       : originalUrl;
 
-    if (Hls.isSupported()) {
-      hls = new Hls({
-        maxBufferLength: 30,
-      });
-      hls.loadSource(url);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR || data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT) {
-                setError(`Manifest load error: Stream might be unavailable or blocked. (${data.details})`);
-              } else {
-                setError(`Network error: ${data.details}`);
+    const isM3U8 = url.includes('.m3u8');
+
+    // Find a default subtitle (English if available)
+    const defaultSub = sourcesData.subtitles?.find(s => s.default || s.label.toLowerCase().includes('english')) || sourcesData.subtitles?.[0];
+
+    const art = new Artplayer({
+      container: artRef.current,
+      url: url,
+      type: isM3U8 ? 'm3u8' : 'mp4',
+      theme: '#E11D48', // matches accent color
+      fullscreen: true,
+      fullscreenWeb: true,
+      playsInline: true,
+      playbackRate: true,
+      setting: true,
+      hotkey: true, // perfect for Android TV remotes (Enter, Arrows) & PC
+      pip: true,
+      autoSize: false,
+      autoMini: true,
+      subtitleOffset: true,
+      subtitle: defaultSub ? {
+        url: defaultSub.file,
+        type: 'vtt',
+        style: {
+          color: '#ffffff',
+          fontSize: '20px',
+          textShadow: '1px 1px 4px #000',
+        },
+        encoding: 'utf-8',
+      } : undefined,
+      customType: {
+        m3u8: function (video, url, artObj) {
+          if (Hls.isSupported()) {
+            if (hls) hls.destroy();
+            hls = new Hls({
+              maxBufferLength: 30,
+              enableWorker: true,
+            });
+            hls.loadSource(url);
+            hls.attachMedia(video);
+            
+            hls.on(Hls.Events.ERROR, (event, data) => {
+              if (data.fatal) {
+                 let suggestion = 'Please try selecting a different server.';
+                 let title = 'Playback Error';
+                 let message = `Failed to load video (${data.details}).`;
+                 let canRetry = true;
+                 
+                 switch (data.type) {
+                   case Hls.ErrorTypes.NETWORK_ERROR:
+                     title = 'Network Error';
+                     if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR) {
+                       suggestion = 'The video stream is unavailable or blocked. Try a different server or disable your adblocker.';
+                     } else if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT) {
+                       suggestion = 'Connection timed out while loading the video manifest. Please check your internet connection.';
+                     } else if (data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR || data.details === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT) {
+                       suggestion = 'Connection interrupted while downloading video segments. Please check your network stability.';
+                     } else if (data.details === Hls.ErrorDetails.MANIFEST_PARSING_ERROR) {
+                       suggestion = 'The video manifest format is not supported or corrupted. Please switch to another server.';
+                       canRetry = false;
+                     } else {
+                       suggestion = 'A network error occurred. Check your internet connection and try again.';
+                     }
+                     break;
+                     
+                   case Hls.ErrorTypes.MEDIA_ERROR:
+                     title = 'Media Decoding Error';
+                     if (data.details === Hls.ErrorDetails.BUFFER_APPEND_ERROR || data.details === Hls.ErrorDetails.BUFFER_APPENDING_ERROR) {
+                       suggestion = 'Your device encountered an issue buffering the video. Try refreshing the page.';
+                     } else if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
+                       suggestion = 'Video buffering stalled. Your connection might be too slow for this quality.';
+                     } else {
+                       suggestion = 'The video player encountered a decoding issue. Try reloading or changing the server.';
+                     }
+                     break;
+                     
+                   case Hls.ErrorTypes.MUX_ERROR:
+                     title = 'Format Muxing Error';
+                     suggestion = 'The video format could not be processed properly by the browser. Try another server.';
+                     canRetry = false;
+                     break;
+                     
+                   case Hls.ErrorTypes.KEY_SYSTEM_ERROR:
+                     title = 'DRM/Decryption Error';
+                     suggestion = 'The video could not be decrypted. This content might be restricted or unsupported on your device.';
+                     canRetry = false;
+                     break;
+                     
+                   default:
+                     title = 'Unexpected Error';
+                     suggestion = 'An unknown playback issue occurred. Please try a different server.';
+                     break;
+                 }
+
+                 setErrorInfo({
+                   title,
+                   message,
+                   suggestion,
+                   canRetry
+                 });
+                 hls?.destroy();
               }
-              hls?.destroy(); // stop automatic retry, use user manual retry via button
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              setError(`Media playback error: ${data.details}`);
-              hls?.destroy(); // or could try `hls?.recoverMediaError()` but requirements say show retry button
-              break;
-            case Hls.ErrorTypes.KEY_SYSTEM_ERROR:
-              setError(`DRM error: ${data.details}`);
-              hls?.destroy();
-              break;
-            default:
-              hls?.destroy();
-              setError(`Fatal video error: ${data.details || 'Unknown'}`);
-              break;
+            });
+
+          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = url;
+          } else {
+            setErrorInfo({
+              title: 'Browser Unsupported',
+              message: 'Your browser does not support HLS playback.',
+              suggestion: 'Please try using a modern browser like Chrome, Firefox, or Safari.',
+              canRetry: false
+            });
           }
-        }
-      });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // For Safari native HLS
-      video.src = url;
-    } else {
-      setError('HLS is not supported in this browser.');
+        },
+      },
+    });
+
+    if (onEnded) {
+      art.on('video:ended', onEnded);
     }
+    
+    art.on('video:error', (e) => {
+      const errorMsg = 'An unexpected video error occurred.';
+      if (!errorInfo) {
+        setErrorInfo({
+          title: 'Video Error',
+          message: errorMsg,
+          suggestion: 'Please try selecting a different server.',
+          canRetry: true
+        });
+      }
+    });
 
     return () => {
-      if (hls) {
-        hls.destroy();
-      }
+      if (hls) hls.destroy();
+      if (art && art.destroy) art.destroy(false);
     };
   }, [sourcesData, defaultSource, isIframe, retryCount]);
 
   return (
     <div className="w-full aspect-video bg-black relative rounded-xl overflow-hidden shadow-2xl glass-panel">
-      {error && (
+      {errorInfo && (
         <div className="absolute inset-0 flex flex-col items-center justify-center p-6 z-20 bg-black/90 backdrop-blur-md">
           <div className="bg-white/[0.03] rounded-2xl p-8 text-center border border-white/10 max-w-lg w-full flex flex-col items-center">
             <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
                <AlertTriangle className="w-8 h-8 text-red-500" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Oops! Playback Issue</h3>
+            <h3 className="text-xl font-bold text-white mb-2">{errorInfo.title}</h3>
             <p className="text-white/60 text-sm mb-6 leading-relaxed">
-              We encountered a problem while trying to play this video. 
-              <span className="block mt-2 px-3 py-2 bg-black/40 rounded-lg text-red-400 font-mono text-xs text-left overflow-hidden text-ellipsis">
-                {error}
+              {errorInfo.message}
+              <span className="block mt-2 px-3 py-2 bg-black/40 rounded-lg text-accent font-medium text-xs text-center overflow-hidden text-ellipsis">
+                {errorInfo.suggestion}
               </span>
             </p>
             <div className="flex flex-col sm:flex-row gap-3 w-full">
-              <button
-                onClick={() => setRetryCount(c => c + 1)}
-                className="flex-1 px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                <RefreshCw size={18} />
-                Try Again
-              </button>
+              {errorInfo.canRetry && (
+                <button
+                  onClick={() => setRetryCount(c => c + 1)}
+                  className="flex-1 px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <RefreshCw size={18} />
+                  Try Again
+                </button>
+              )}
               <div className="relative flex-1 group">
                 <button
                   className="w-full px-5 py-2.5 bg-accent hover:bg-accent/90 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
@@ -132,41 +232,7 @@ export default function VideoPlayer({ sourcesData, onEnded }: VideoPlayerProps) 
           allow="autoplay; fullscreen"
         />
       ) : (
-        <video
-          ref={videoRef}
-          controls
-          className="w-full h-full relative z-0"
-          crossOrigin="anonymous" // required for subtitles sometimes
-          poster={sourcesData.intro ? undefined : undefined} // Not provided in source directly, but usually we have it on page
-          onEnded={onEnded}
-          onError={(e) => {
-            const mediaError = (e.target as HTMLVideoElement).error;
-            if (mediaError) {
-              const errorMessage = {
-                1: 'Playback aborted.',
-                2: 'Network error.',
-                3: 'Media decoding failed.',
-                4: 'Format not supported or media unavailable.',
-              }[mediaError.code] || 'Unknown media error.';
-              
-              if (!error) {
-                setError(`Video Error: ${errorMessage}`);
-              }
-            }
-          }}
-        >
-          {sourcesData.subtitles?.map((sub, idx) => (
-            <track
-              key={idx}
-              kind={sub.kind || "captions"}
-              label={sub.label}
-              src={sub.file}
-              srcLang={sub.label.substring(0, 2).toLowerCase()}
-              default={sub.default || sub.label.includes('English')}
-            />
-          ))}
-          Your browser does not support HTML5 video.
-        </video>
+        <div ref={artRef} className="w-full h-full relative z-0 artplayer-app" />
       )}
     </div>
   );
