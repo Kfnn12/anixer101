@@ -1,34 +1,38 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getAnimeDetails, AnimeDetails as AnimeDetailsType } from '../lib/api';
+import { getAnimeDetails, AnimeDetails as AnimeDetailsType, ApiError } from '../lib/api';
 import { Play } from 'lucide-react';
 import AnimeCard from '../components/AnimeCard';
 import AnimeTrailer from '../components/AnimeTrailer';
 import ContinueWatching from '../components/ContinueWatching';
-import toast from 'react-hot-toast';
+import ErrorState from '../components/ErrorState';
 
 export default function AnimeDetails() {
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<AnimeDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     async function load() {
       if (!id) return;
       setLoading(true);
+      setErrorMsg('');
       window.scrollTo(0, 0);
       try {
         const details = await getAnimeDetails(id);
         setData(details);
       } catch (err) {
         console.error(err);
-        toast.error("Failed to load anime details");
+        if (err instanceof ApiError) setErrorMsg(err.message);
+        else setErrorMsg("Failed to load anime details.");
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, [id]);
+  }, [id, retryCount]);
 
   if (loading) {
      return (
@@ -38,7 +42,13 @@ export default function AnimeDetails() {
     );
   }
 
-  if (!data) return <div className="p-8 text-center text-white/50">Anime not found.</div>;
+  if (errorMsg || !data) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <ErrorState message={errorMsg || "Anime not found."} onRetry={() => setRetryCount(c => c + 1)} />
+      </div>
+    );
+  }
 
   const { info, moreInfo } = data.anime;
 

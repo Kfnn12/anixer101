@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Github, Twitter, MessageSquare } from 'lucide-react';
+import { Github, Twitter, MessageSquare, Tv } from 'lucide-react';
 
 export default function Footer() {
   const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -13,7 +13,20 @@ export default function Footer() {
           
           {/* Brand & Info */}
           <div className="md:col-span-4 flex flex-col gap-4">
-            <Link to="/" className="text-accent font-black text-3xl tracking-tighter">ANIMXER</Link>
+            <Link to="/" className="flex items-center gap-3 group w-fit">
+              <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-[var(--color-accent-secondary)] shadow-lg shadow-accent/20 overflow-hidden transform duration-300 group-hover:scale-105">
+                <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-300" />
+                <Tv className="w-5 h-5 text-white drop-shadow-md relative z-10" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70 leading-none">
+                  ANIMXER
+                </span>
+                <span className="text-[0.6rem] font-black tracking-[0.2em] text-accent uppercase leading-none mt-1 opacity-80">
+                  Anime World
+                </span>
+              </div>
+            </Link>
             <p className="text-white/50 text-sm leading-relaxed max-w-sm">
               Animxer is a free anime streaming platform where you can watch english subbed and dubbed anime online. We don't host any files on our server, we only link to the media which is hosted on 3rd party services.
             </p>

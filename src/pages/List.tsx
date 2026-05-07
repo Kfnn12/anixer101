@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { getHome, getCategory, getAZList, getGenre, Anime } from '../lib/api';
+import { getHome, getCategory, getAZList, getGenre, Anime, ApiError } from '../lib/api';
 import AnimeCard from '../components/AnimeCard';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
-import toast from 'react-hot-toast';
+import ErrorState from '../components/ErrorState';
 
 const LIST_TITLES: Record<string, string> = {
   trending: 'Trending Now',
@@ -102,9 +101,11 @@ export default function List({ isGenre = false }: { isGenre?: boolean }) {
         }
       } catch (err) {
         console.error(err);
-        const errorMsg = "We couldn't load the anime list. Our servers might be experiencing a hiccup.";
-        setError(errorMsg);
-        toast.error(errorMsg);
+        if (err instanceof ApiError) {
+          setError(err.message);
+        } else {
+          setError("We couldn't load the anime list. Our servers might be experiencing a hiccup.");
+        }
       } finally {
         setLoading(false);
       }
@@ -159,20 +160,7 @@ export default function List({ isGenre = false }: { isGenre?: boolean }) {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-          <div className="bg-red-500/10 p-4 rounded-full mb-4">
-            <AlertTriangle className="w-8 h-8 text-red-500" />
-          </div>
-          <h3 className="text-xl font-bold text-white mb-2">Oops! Something went wrong</h3>
-          <p className="text-white/60 mb-6 max-w-md">{error}</p>
-          <button
-            onClick={() => setRetryCount(c => c + 1)}
-            className="flex items-center gap-2 px-6 py-3 rounded-full bg-accent hover:bg-accent/90 text-white font-medium transition-colors"
-          >
-            <RefreshCw className="w-5 h-5" />
-            Try Again
-          </button>
-        </div>
+        <ErrorState message={error} onRetry={() => setRetryCount(c => c + 1)} className="my-20" />
       ) : items.length > 0 ? (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-6">

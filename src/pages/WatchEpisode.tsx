@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getAnimeEpisodes, getEpisodeServers, getEpisodeSources, Episode, ServersData, SourcesData, getAnimeDetails, AnimeDetails } from '../lib/api';
+import { getAnimeEpisodes, getEpisodeServers, getEpisodeSources, Episode, ServersData, SourcesData, getAnimeDetails, AnimeDetails, ApiError } from '../lib/api';
 import VideoPlayer from '../components/VideoPlayer';
 import AnimeCard from '../components/AnimeCard';
 import { ArrowLeft, Server, PlayCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
-import toast from 'react-hot-toast';
+import ErrorState from '../components/ErrorState';
 
 import { useContinueWatching } from '../hooks/useContinueWatching';
 
@@ -25,7 +25,10 @@ export default function WatchEpisode() {
   const [sources, setSources] = useState<SourcesData | null>(null);
   
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
   const [sourcesLoading, setSourcesLoading] = useState(false);
+  const [sourcesErrorMsg, setSourcesErrorMsg] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
 
   const [autoPlayEnabled, setAutoPlayEnabled] = useState<boolean>(() => {
     return localStorage.getItem('autoPlayEnabled') !== 'false';
@@ -108,6 +111,7 @@ export default function WatchEpisode() {
 
     async function loadInitial() {
       setLoading(true);
+      setErrorMsg('');
       try {
         const [eps, srvs, dets] = await Promise.all([
           getAnimeEpisodes(aId),
@@ -131,26 +135,29 @@ export default function WatchEpisode() {
         }
       } catch (err) {
         console.error(err);
-        toast.error("Failed to load episode data. It might be unavailable.");
+        if (err instanceof ApiError) setErrorMsg(err.message);
+        else setErrorMsg("Failed to load episode data. It might be unavailable.");
       } finally {
         setLoading(false);
       }
     }
     
     loadInitial();
-  }, [episodeId]);
+  }, [episodeId, retryCount]);
 
   useEffect(() => {
     if (!episodeId || !activeServer || !activeCategory) return;
     
     async function loadSource() {
       setSourcesLoading(true);
+      setSourcesErrorMsg('');
       try {
         const data = await getEpisodeSources(episodeId!, activeCategory, activeServer);
         setSources(data);
       } catch (error) {
         console.error(error);
-        toast.error("Failed to load video source for the selected server.");
+        if (error instanceof ApiError) setSourcesErrorMsg(error.message);
+        else setSourcesErrorMsg("Failed to load video source for the selected server.");
         setSources(null);
       } finally {
         setSourcesLoading(false);
@@ -164,6 +171,14 @@ export default function WatchEpisode() {
      return (
       <div className="flex h-screen items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
+      </div>
+    );
+  }
+
+  if (errorMsg || !details) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <ErrorState message={errorMsg || "We couldn't play this episode right now."} onRetry={() => setRetryCount(c => c + 1)} />
       </div>
     );
   }
@@ -188,6 +203,11 @@ export default function WatchEpisode() {
           {sourcesLoading ? (
             <div className="w-full aspect-video bg-black/50 relative rounded-xl overflow-hidden glass-panel flex items-center justify-center">
                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
+            </div>
+          ) : sourcesErrorMsg ? (
+            <div className="w-full aspect-video bg-black/50 relative rounded-xl overflow-hidden glass-panel flex flex-col items-center justify-center text-white/50 p-4 text-center">
+              <span className="text-red-400 mb-2 font-bold">Failed to load video source</span>
+              <span>{sourcesErrorMsg}</span>
             </div>
           ) : sources && sources.sources.length > 0 ? (
             <VideoPlayer 

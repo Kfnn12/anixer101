@@ -2,22 +2,23 @@ import { useState, useEffect } from 'react';
 import { getSchedule, ScheduleItem } from '../lib/api';
 import { Link } from 'react-router-dom';
 import { Clock } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 export default function ScheduleSection() {
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
   const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     async function loadSchedule() {
       setLoading(true);
+      setErrorMsg('');
       try {
         const data = await getSchedule(currentDate);
         setSchedule(data);
       } catch (err) {
         console.error("Failed to load schedule", err);
-        toast.error("Failed to load estimated schedule.");
+        setErrorMsg("Failed to load estimated schedule.");
       } finally {
         setLoading(false);
       }
@@ -28,13 +29,15 @@ export default function ScheduleSection() {
   if (loading && schedule.length === 0) {
     return (
       <section className="py-6">
-        <h2 className="text-xl font-bold mb-6">Estimated Schedule</h2>
+        <h2 className="text-xl font-bold mb-6 flex items-center gap-2"><Clock className="w-5 h-5 text-accent" /> Estimated Schedule</h2>
         <div className="flex items-center justify-center p-8">
            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent"></div>
         </div>
       </section>
     );
   }
+
+  if (errorMsg && schedule.length === 0) return null; // Gracefully degrade by hiding schedule section
 
   if (schedule.length === 0 && !loading) return null;
 

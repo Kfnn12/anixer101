@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { searchAnime } from '../lib/api';
+import { searchAnime, ApiError } from '../lib/api';
 import AnimeCard from '../components/AnimeCard';
-import toast from 'react-hot-toast';
+import ErrorState from '../components/ErrorState';
 
 export default function Search() {
   const [searchParams] = useSearchParams();
@@ -10,32 +10,32 @@ export default function Search() {
   
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
+
+  const doSearch = async () => {
+    if (!query) return;
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await searchAnime(query, 1);
+      setResults(res.animes || []);
+    } catch (err) {
+      console.error(err);
+      if (err instanceof ApiError) setErrorMsg(err.message);
+      else setErrorMsg('Failed to process web search. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!query) {
       setResults([]);
       return;
     }
-
-    async function doSearch() {
-      setLoading(true);
-      setError('');
-      try {
-        const res = await searchAnime(query, 1);
-        setResults(res.animes || []);
-      } catch (err) {
-        console.error(err);
-        const errorMsg = 'Failed to search anime. Please try again.';
-        setError(errorMsg);
-        toast.error(errorMsg);
-      } finally {
-        setLoading(false);
-      }
-    }
-    
     doSearch();
-  }, [query]);
+  }, [query, retryCount]);
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-12 min-h-screen">
@@ -51,8 +51,8 @@ export default function Search() {
         <div className="flex justify-center py-20">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
         </div>
-      ) : error ? (
-        <div className="text-center text-red-400 py-10 glass-panel rounded-xl">{error}</div>
+      ) : errorMsg ? (
+        <ErrorState message={errorMsg} onRetry={() => setRetryCount(c => c + 1)} className="my-10" />
       ) : results.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-6">
           {results.map((item: any) => (

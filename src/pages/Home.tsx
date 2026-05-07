@@ -1,32 +1,37 @@
 import { useState, useEffect } from 'react';
-import { getHome, HomeData } from '../lib/api';
+import { getHome, HomeData, ApiError } from '../lib/api';
 import { Link } from 'react-router-dom';
 import AnimeCard from '../components/AnimeCard';
 import SpotlightCarousel from '../components/SpotlightCarousel';
 import ScheduleSection from '../components/ScheduleSection';
 import ContinueWatching from '../components/ContinueWatching';
-import toast from 'react-hot-toast';
+import ErrorState from '../components/ErrorState';
 
 export default function Home() {
   const [data, setData] = useState<HomeData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const loadData = async () => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const homeData = await getHome();
+      if (!homeData || Object.keys(homeData).length === 0 || (!homeData.spotlightAnimes?.length && !homeData.trendingAnimes?.length)) {
+        setErrorMsg("Failed to load anime content. The API might be down.");
+      } else {
+        setData(homeData);
+      }
+    } catch (err) {
+      console.error(err);
+      if (err instanceof ApiError) setErrorMsg(err.message);
+      else setErrorMsg("Network error: Could not fetch home data.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const homeData = await getHome();
-        if (!homeData || Object.keys(homeData).length === 0 || (!homeData.spotlightAnimes?.length && !homeData.trendingAnimes?.length)) {
-          toast.error("Failed to load anime content");
-        } else {
-          setData(homeData);
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error("Network error: Could not fetch home data");
-      } finally {
-        setLoading(false);
-      }
-    }
     loadData();
   }, []);
 
@@ -38,7 +43,13 @@ export default function Home() {
     );
   }
 
-  if (!data) return <div className="p-8 text-center text-white/50">Failed to load content.</div>;
+  if (errorMsg || !data) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center p-4">
+        <ErrorState message={errorMsg || "Failed to load content."} onRetry={loadData} />
+      </div>
+    );
+  }
 
   return (
     <div className="pb-24">

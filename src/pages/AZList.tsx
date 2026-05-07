@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { getAZList, Anime } from '../lib/api';
+import { getAZList, Anime, ApiError } from '../lib/api';
 import AnimeCard from '../components/AnimeCard';
-import toast from 'react-hot-toast';
+import ErrorState from '../components/ErrorState';
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -16,32 +16,37 @@ export default function AZList() {
 
   const [items, setItems] = useState<Anime[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
   const [hasNextPage, setHasNextPage] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const loadData = async () => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await getAZList(currentLetter, page);
+      if (res && res.animes) {
+        setItems(res.animes);
+        setHasNextPage(res.hasNextPage);
+        setTotalPages(res.totalPages);
+      } else {
+        setItems([]);
+      }
+    } catch (err) {
+      console.error(err);
+      setItems([]);
+      if (err instanceof ApiError) setErrorMsg(err.message);
+      else setErrorMsg('Failed to load anime list. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        const res = await getAZList(currentLetter, page);
-        if (res && res.animes) {
-          setItems(res.animes);
-          setHasNextPage(res.hasNextPage);
-          setTotalPages(res.totalPages);
-        } else {
-          setItems([]);
-        }
-      } catch (err) {
-        console.error(err);
-        setItems([]);
-        toast.error('Failed to load anime list. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    }
     loadData();
     window.scrollTo(0, 0);
-  }, [currentLetter, page]);
+  }, [currentLetter, page, retryCount]);
 
   const handleNextPage = () => {
     if (hasNextPage || page < totalPages) {
@@ -97,6 +102,8 @@ export default function AZList() {
         <div className="flex justify-center py-20">
           <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
         </div>
+      ) : errorMsg ? (
+        <ErrorState message={errorMsg} onRetry={() => setRetryCount(c => c + 1)} className="my-20" />
       ) : items.length > 0 ? (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-6">

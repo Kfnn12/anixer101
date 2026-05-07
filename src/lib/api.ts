@@ -14,14 +14,31 @@ const M3U8_PROXIES = [PROXY_1, PROXY_2];
 
 let activeProxyIndex = 0;
 
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 async function fetchFromApi(path: string) {
   const url = `${BASE_API_URL}${path}`;
-  const response = await fetch(url);
-  if (!response.ok) {
-    console.error(`fetchFromApi Failed: ${url} status ${response.status}`);
-    throw new Error(`API request failed: ${response.status}`);
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`fetchFromApi Failed: ${url} status ${response.status}`);
+      let errorMessage = `API request failed with status: ${response.status}`;
+      if (response.status === 404) errorMessage = "The requested content could not be found.";
+      else if (response.status === 429) errorMessage = "You are making too many requests. Please slow down and try again later.";
+      else if (response.status >= 500) errorMessage = "The server is currently experiencing issues. Please try again later.";
+      throw new ApiError(response.status, errorMessage);
+    }
+    return await response.json();
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    console.error(`Network error: ${url}`, error);
+    throw new Error(error instanceof Error ? error.message : "Network problem. Please check your connection.");
   }
-  return response.json();
 }
 
 export function getM3U8ProxyUrl(url: string, _referer?: string) {
